@@ -10,11 +10,11 @@ module.exports = {
                 defaultValue: Sequelize.UUIDV4,
             },
             userId: {
-                type: Sequelize.STRING,
+                type: Sequelize.UUID,
                 allowNull: false,
             },
             courseId: {
-                type: Sequelize.STRING,
+                type: Sequelize.UUID,
                 allowNull: false,
             },
             createdAt: {

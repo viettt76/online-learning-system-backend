@@ -10,7 +10,7 @@ module.exports = {
                 defaultValue: Sequelize.UUIDV4,
             },
             chapterId: {
-                type: Sequelize.STRING,
+                type: Sequelize.UUID,
                 allowNull: false,
             },
             name: {

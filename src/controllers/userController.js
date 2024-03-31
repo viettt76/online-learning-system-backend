@@ -16,7 +16,6 @@ class UserController {
             if (created) {
                 res.status(200).json({
                     errCode: 0,
-                    message: 'Register account successful',
                     data: {
                         id: user?.id,
                         isTeacher: user?.isTeacher,
@@ -25,7 +24,6 @@ class UserController {
             } else {
                 res.status(200).json({
                     errCode: 0,
-                    message: 'Login successful',
                     data: {
                         id: user?.id,
                         isTeacher: user?.isTeacher,
@@ -46,7 +44,6 @@ class UserController {
             await user.save();
             res.status(200).json({
                 errCode: 0,
-                message: 'Register as a teacher successfully',
             });
         } catch (error) {
             next(error);

@@ -1,6 +1,10 @@
 const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-    class Course extends Model {}
+    class Course extends Model {
+        static associate(models) {
+            Course.belongsTo(models.User, { foreignKey: 'authorId', targetKey: 'id', as: 'authorInfo' });
+        }
+    }
 
     Course.init(
         {
@@ -12,8 +16,9 @@ module.exports = (sequelize, DataTypes) => {
             },
             img: DataTypes.BLOB('long'),
             name: DataTypes.STRING,
-            authorId: DataTypes.STRING,
-            price: DataTypes.STRING,
+            description: DataTypes.TEXT,
+            authorId: DataTypes.UUID,
+            price: DataTypes.INTEGER,
             level: DataTypes.STRING,
         },
         {

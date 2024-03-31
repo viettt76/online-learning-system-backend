@@ -18,11 +18,11 @@ module.exports = {
                 allowNull: false,
             },
             authorId: {
-                type: Sequelize.STRING,
+                type: Sequelize.UUID,
                 allowNull: false,
             },
             price: {
-                type: Sequelize.STRING,
+                type: Sequelize.INTEGER,
                 allowNull: false,
             },
             level: {
