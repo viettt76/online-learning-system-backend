@@ -16,6 +16,8 @@ module.exports = (sequelize, DataTypes) => {
                 defaultValue: DataTypes.UUIDV4,
             },
             email: DataTypes.STRING,
+            job: DataTypes.STRING,
+            introduction: DataTypes.TEXT,
             familyName: DataTypes.STRING,
             givenName: DataTypes.STRING,
             picture: DataTypes.BLOB('long'),

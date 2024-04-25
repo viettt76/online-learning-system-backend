@@ -1,7 +1,12 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-    class Chapter extends Model {}
+    class Chapter extends Model {
+        static associate(models) {
+            Chapter.belongsTo(models.Course, { foreignKey: 'courseId', targetKey: 'id', as: 'chapterInfo' });
+            Chapter.hasMany(models.Lesson, { foreignKey: 'chapterId', as: 'lessonInfo' });
+        }
+    }
 
     Chapter.init(
         {
@@ -11,8 +16,9 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.UUID,
                 defaultValue: DataTypes.UUIDV4,
             },
-            ChapterId: DataTypes.UUID,
-            title: DataTypes.UUID,
+            courseId: DataTypes.UUID,
+            chapterNumber: DataTypes.SMALLINT,
+            title: DataTypes.STRING,
         },
         {
             sequelize,

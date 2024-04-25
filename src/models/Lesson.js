@@ -1,7 +1,11 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-    class Lesson extends Model {}
+    class Lesson extends Model {
+        static associate(models) {
+            Lesson.belongsTo(models.Chapter, { foreignKey: 'chapterId', targetKey: 'id', as: 'lessonInfo' });
+        }
+    }
 
     Lesson.init(
         {
@@ -12,8 +16,10 @@ module.exports = (sequelize, DataTypes) => {
                 defaultValue: DataTypes.UUIDV4,
             },
             chapterId: DataTypes.UUID,
+            lessonNumber: DataTypes.SMALLINT,
             name: DataTypes.STRING,
-            time: DataTypes.TIME,
+            video: DataTypes.TEXT,
+            time: DataTypes.INTEGER,
         },
         {
             sequelize,

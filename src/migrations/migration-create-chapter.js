@@ -13,6 +13,10 @@ module.exports = {
                 type: Sequelize.UUID,
                 allowNull: false,
             },
+            chapterNumber: {
+                type: Sequelize.SMALLINT,
+                allowNull: false,
+            },
             title: {
                 type: Sequelize.STRING,
                 allowNull: false,

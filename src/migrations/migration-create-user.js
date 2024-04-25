@@ -22,6 +22,14 @@ module.exports = {
                 type: Sequelize.STRING,
                 allowNull: false,
             },
+            job: {
+                type: Sequelize.STRING,
+                allowNull: true,
+            },
+            introduction: {
+                type: Sequelize.TEXT,
+                allowNull: true,
+            },
             picture: {
                 type: Sequelize.BLOB('long'),
                 allowNull: false,

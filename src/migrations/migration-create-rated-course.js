@@ -2,31 +2,23 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
     async up(queryInterface, Sequelize) {
-        await queryInterface.createTable('lessons', {
+        await queryInterface.createTable('rated_courses', {
             id: {
                 type: Sequelize.UUID,
                 primaryKey: true,
                 allowNull: false,
                 defaultValue: Sequelize.UUIDV4,
             },
-            chapterId: {
+            userId: {
                 type: Sequelize.UUID,
                 allowNull: false,
             },
-            lessonNumber: {
-                type: Sequelize.SMALLINT,
+            courseId: {
+                type: Sequelize.UUID,
                 allowNull: false,
             },
-            name: {
-                type: Sequelize.STRING,
-                allowNull: false,
-            },
-            video: {
-                type: Sequelize.TEXT,
-                allowNull: false,
-            },
-            time: {
-                type: Sequelize.INTEGER,
+            star: {
+                type: Sequelize.TINYINT,
                 allowNull: false,
             },
             createdAt: {
@@ -38,6 +30,6 @@ module.exports = {
         });
     },
     async down(queryInterface, Sequelize) {
-        await queryInterface.dropTable('lessons');
+        await queryInterface.dropTable('rated_courses');
     },
 };
