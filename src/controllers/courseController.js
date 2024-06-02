@@ -1,5 +1,7 @@
 const db = require('../models');
 const { Op } = require('sequelize');
+const { checkSignature } = require('../utils/commonUtils');
+
 class CourseController {
     // [GET] /course/all
     async getAll(req, res, next) {
@@ -42,8 +44,8 @@ class CourseController {
     // [GET] /course/detail
     async getDetail(req, res, next) {
         try {
-            let id = req.query.id;
-            let courses = await db.Course.findAll({
+            const id = req.query.id;
+            const courses = await db.Course.findAll({
                 where: { id },
                 attributes: [
                     'img',
@@ -77,7 +79,7 @@ class CourseController {
                 .map((course) => ({ ...course?.chapterInfo }))
                 .forEach((chapter) => {
                     time += chapter?.lessonInfo?.time;
-                    let chapterExisting = chapterList.find((i) => i?.chapterId === chapter?.id);
+                    const chapterExisting = chapterList.find((i) => i?.chapterId === chapter?.id);
                     if (chapterExisting) {
                         if (chapter.lessonInfo.id !== null) {
                             numberOfLessons++;
@@ -102,7 +104,7 @@ class CourseController {
                     }
                 });
 
-            let course = {
+            const course = {
                 name: courses[0]?.name,
                 img: courses[0]?.img,
                 author: courses[0]?.authorInfo,
@@ -132,7 +134,7 @@ class CourseController {
     // [POST] /course/post
     async post(req, res, next) {
         try {
-            let courseInfo = req.body;
+            const courseInfo = req.body;
             if (Number(courseInfo?.price) === NaN) {
                 return res.status(404).json({
                     errCode: 2,
@@ -158,9 +160,8 @@ class CourseController {
     // [GET] /course/teaching
     async teaching(req, res, next) {
         try {
-            console.log(req.query);
-            let id = req.query.id;
-            let courseList = await db.Course.findAll({
+            const id = req.query.id;
+            const courseList = await db.Course.findAll({
                 where: { authorId: id },
             });
             res.status(200).json({
@@ -175,9 +176,9 @@ class CourseController {
     // [GET] /course/search
     async search(req, res, next) {
         try {
-            let keyword = req.query.keyword;
+            const keyword = req.query.keyword;
 
-            let courseList = await db.Course.findAll({
+            const courseList = await db.Course.findAll({
                 where: {
                     [Op.or]: [
                         {
@@ -209,19 +210,12 @@ class CourseController {
     // [PUT] /course/update-info
     async updateInfo(req, res, next) {
         try {
-            let data = req.body;
+            const data = req.body;
 
             let course = await db.Course.findOne({
                 where: { id: data?.id },
                 raw: false,
             });
-
-            // var [err, course] = await to(
-            //     db.Course.findOne({
-            //         where: { id: data.id },
-            //     }),
-
-            // );
 
             course.img = data?.img;
             course.name = data?.name;
@@ -230,20 +224,190 @@ class CourseController {
             course.price = data?.price;
             course.level = data?.level;
 
-            // await course.update({
-            //     img: data?.img,
-            //     name: data?.name,
-            //     description: data?.description,
-            //     authorId: data?.authorId,
-            //     price: data?.price,
-            //     level: data?.level,
-            // });
-
             await course.save();
 
             res.status(200).json({
                 errCode: 0,
             });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // [GET] /course/favorite
+    async favorite(req, res, next) {
+        try {
+            const tokenData = req.cookies.token;
+            if (tokenData) {
+                const check = checkSignature(tokenData);
+                if (check.valid) {
+                    const favoriteCourseList = await db.Liked_Course.findAll({
+                        where: {
+                            userId: check?.payload?.id,
+                        },
+                        attributes: ['courseId'],
+                        include: [{ model: db.Course, attributes: ['img', 'name', 'price'], as: 'likedCourseInfo' }],
+                        raw: true,
+                        nest: true,
+                        order: [['updatedAt', 'DESC']],
+                    });
+                    return res.json({
+                        errCode: 0,
+                        data: favoriteCourseList,
+                    });
+                }
+            }
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // [POST] /course/favorite/add
+    async addFavorite(req, res, next) {
+        try {
+            const courseId = req.body.courseId;
+            const tokenData = req.cookies.token;
+            if (tokenData) {
+                const check = checkSignature(tokenData);
+                if (check.valid && courseId) {
+                    const [likedCourse, created] = await db.Liked_Course.findOrCreate({
+                        where: { userId: check?.payload?.id, courseId },
+                        defaults: {
+                            userId: check?.payload?.id,
+                            courseId,
+                        },
+                    });
+                    if (created) {
+                        res.status(200).json({
+                            errCode: 0,
+                        });
+                    } else {
+                        res.status(200).json({
+                            errCode: 1,
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // [GET] /course/cart
+    async cart(req, res, next) {
+        try {
+            const tokenData = req.cookies.token;
+            if (tokenData) {
+                const check = checkSignature(tokenData);
+                if (check.valid) {
+                    const courseCartList = await db.Courses_Cart.findAll({
+                        where: {
+                            userId: check?.payload?.id,
+                        },
+                        attributes: ['courseId'],
+                        include: [{ model: db.Course, attributes: ['img', 'name', 'price'], as: 'courseCartInfo' }],
+                        raw: true,
+                        nest: true,
+                        order: [['updatedAt', 'DESC']],
+                    });
+                    return res.json({
+                        errCode: 0,
+                        data: courseCartList,
+                    });
+                }
+            }
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // [POST] /course/cart/add
+    async addCart(req, res, next) {
+        try {
+            const courseId = req.body.courseId;
+            const tokenData = req.cookies.token;
+            if (tokenData) {
+                const check = checkSignature(tokenData);
+                if (check.valid && courseId) {
+                    const [courseCart, created] = await db.Courses_Cart.findOrCreate({
+                        where: { userId: check?.payload?.id, courseId },
+                        defaults: {
+                            userId: check?.payload?.id,
+                            courseId,
+                        },
+                    });
+                    if (created) {
+                        res.status(200).json({
+                            errCode: 0,
+                        });
+                    } else {
+                        res.status(200).json({
+                            errCode: 1,
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // [GET] /course/purchased
+    async purchased(req, res, next) {
+        try {
+            const tokenData = req.cookies.token;
+            if (tokenData) {
+                const check = checkSignature(tokenData);
+                if (check.valid) {
+                    const courseCartList = await db.Purchased_Course.findAll({
+                        where: {
+                            userId: check?.payload?.id,
+                        },
+                        attributes: ['courseId'],
+                        include: [
+                            { model: db.Course, attributes: ['img', 'name', 'price'], as: 'purchasedCourseInfo' },
+                        ],
+                        raw: true,
+                        nest: true,
+                        order: [['updatedAt', 'DESC']],
+                    });
+                    return res.json({
+                        errCode: 0,
+                        data: courseCartList,
+                    });
+                }
+            }
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // [POST] /course/purchased/add
+    async addPurchased(req, res, next) {
+        try {
+            const courseId = req.body.courseId;
+            const tokenData = req.cookies.token;
+            if (tokenData) {
+                const check = checkSignature(tokenData);
+                if (check.valid && courseId) {
+                    const [purchasedCourse, created] = await db.Purchased_Course.findOrCreate({
+                        where: { userId: check?.payload?.id, courseId },
+                        defaults: {
+                            userId: check?.payload?.id,
+                            courseId,
+                        },
+                    });
+                    if (created) {
+                        res.status(200).json({
+                            errCode: 0,
+                        });
+                    } else {
+                        res.status(200).json({
+                            errCode: 1,
+                        });
+                    }
+                }
+            }
         } catch (error) {
             next(error);
         }

@@ -1,9 +1,13 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-    class CourseCart extends Model {}
+    class Courses_Cart extends Model {
+        static associate(models) {
+            Courses_Cart.belongsTo(models.Course, { foreignKey: 'courseId', targetKey: 'id', as: 'courseCartInfo' });
+        }
+    }
 
-    CourseCart.init(
+    Courses_Cart.init(
         {
             id: {
                 allowNull: false,
@@ -16,8 +20,8 @@ module.exports = (sequelize, DataTypes) => {
         },
         {
             sequelize,
-            modelName: 'CourseCart',
+            modelName: 'Courses_Cart',
         },
     );
-    return CourseCart;
+    return Courses_Cart;
 };

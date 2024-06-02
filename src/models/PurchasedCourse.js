@@ -1,9 +1,17 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-    class PurchasedCourse extends Model {}
+    class Purchased_Course extends Model {
+        static associate(models) {
+            Purchased_Course.belongsTo(models.Course, {
+                foreignKey: 'courseId',
+                targetKey: 'id',
+                as: 'purchasedCourseInfo',
+            });
+        }
+    }
 
-    PurchasedCourse.init(
+    Purchased_Course.init(
         {
             id: {
                 allowNull: false,
@@ -16,8 +24,8 @@ module.exports = (sequelize, DataTypes) => {
         },
         {
             sequelize,
-            modelName: 'PurchasedCourse',
+            modelName: 'Purchased_Course',
         },
     );
-    return PurchasedCourse;
+    return Purchased_Course;
 };

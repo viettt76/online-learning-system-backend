@@ -4,8 +4,8 @@ class ChapterController {
     // [POST] /chapter/post
     async post(req, res, next) {
         try {
-            let data = req.body;
-            let chapter = await db.Chapter.create({
+            const data = req.body;
+            const chapter = await db.Chapter.create({
                 courseId: data?.courseId,
                 chapterNumber: data?.chapterNumber,
                 title: data?.title,

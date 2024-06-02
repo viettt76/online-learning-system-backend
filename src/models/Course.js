@@ -4,6 +4,9 @@ module.exports = (sequelize, DataTypes) => {
         static associate(models) {
             Course.belongsTo(models.User, { foreignKey: 'authorId', targetKey: 'id', as: 'authorInfo' });
             Course.hasMany(models.Chapter, { foreignKey: 'courseId', as: 'chapterInfo' });
+            Course.hasOne(models.Liked_Course, { foreignKey: 'courseId', as: 'likedCourseInfo' });
+            Course.hasOne(models.Courses_Cart, { foreignKey: 'courseId', as: 'courseCartInfo' });
+            Course.hasOne(models.Purchased_Course, { foreignKey: 'courseId', as: 'purchasedCourseInfo' });
         }
     }
 

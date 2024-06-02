@@ -5,11 +5,11 @@ class LessonController {
     // [POST] /lesson/post
     async post(req, res, next) {
         try {
-            let data = req.body;
-            let apiKey = process.env.API_KEY_YOUTUBE;
-            let videoId = getYoutubeId(data?.video);
+            const data = req.body;
+            const apiKey = process.env.API_KEY_YOUTUBE;
+            const videoId = getYoutubeId(data?.video);
 
-            let time = await fetch(
+            const time = await fetch(
                 `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails&key=${apiKey}`,
             )
                 .then((res) => res.json())
@@ -36,9 +36,9 @@ class LessonController {
     // [GET] /lesson/video
     async video(req, res, next) {
         try {
-            let id = req.query.id;
+            const id = req.query.id;
 
-            let lesson = await db.Lesson.findOne({
+            const lesson = await db.Lesson.findOne({
                 where: { id },
                 attributes: ['lessonNumber', 'name', 'video'],
             });

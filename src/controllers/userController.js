@@ -1,20 +1,21 @@
 const { Op } = require('sequelize');
-var crypto = require('crypto');
+const crypto = require('crypto');
 const db = require('../models');
 const jwtSecret = require('../utils/jwtSecret');
-const { base64url } = require('../utils/commonUtils');
+const { base64url, checkSignature } = require('../utils/commonUtils');
 
 class UserController {
     // [POST] /user/login
     async login(req, res, next) {
         try {
+            let dataLogin = req.body;
             const [user, created] = await db.User.findOrCreate({
-                where: { email: req.body.email },
+                where: { email: dataLogin.email },
                 defaults: {
-                    email: req.body.email,
-                    familyName: req.body.familyName,
-                    givenName: req.body.givenName,
-                    picture: req.body.picture,
+                    email: dataLogin.email,
+                    familyName: dataLogin.familyName,
+                    givenName: dataLogin.givenName,
+                    picture: dataLogin.picture,
                 },
             });
             const header = {
@@ -49,7 +50,7 @@ class UserController {
 
     // [POST] /user/logout
     logout(req, res, next) {
-        res.clearCookie('token').json({});
+        res.clearCookie('token').status(200).json();
     }
 
     // [GET] /user/personal-info
@@ -57,17 +58,12 @@ class UserController {
         try {
             const tokenData = req.cookies.token;
             if (tokenData) {
-                const [encodedHeader, encodedPayload, signatureData] = tokenData.split('.');
-                const payload = JSON.parse(atob(encodedPayload));
-                const signature = crypto
-                    .createHmac('sha256', jwtSecret)
-                    .update(`${encodedHeader}.${encodedPayload}`)
-                    .digest('base64url');
+                const check = checkSignature(tokenData);
 
-                if (signature === signatureData) {
+                if (check.valid) {
                     const user = await db.User.findOne({
                         where: {
-                            id: payload?.id,
+                            id: check?.payload?.id,
                         },
                         attributes: [
                             'id',
@@ -103,8 +99,11 @@ class UserController {
     // [PATCH] /user/is_teacher
     async isTeacher(req, res, next) {
         try {
-            let id = req.body.id;
+            const { id, job, introduction } = req.body;
+            console.log(req.body);
             let user = await db.User.findOne({ where: { id }, raw: false });
+            user.job = job;
+            user.introduction = introduction;
             user.isTeacher = true;
             await user.save();
             res.status(200).json({
@@ -118,9 +117,9 @@ class UserController {
     // [GET] /user/teacher/search
     async searchTeacher(req, res, next) {
         try {
-            let keyword = req.query.keyword;
+            const keyword = req.query.keyword;
 
-            let user = await db.User.findAll({
+            const user = await db.User.findAll({
                 where: {
                     [Op.or]: [
                         {
@@ -149,9 +148,9 @@ class UserController {
     // [GET] /user/teacher/detail
     async teacherDetail(req, res, next) {
         try {
-            let id = req.query.id;
+            const id = req.query.id;
 
-            let courses = await db.User.findAll({
+            const courses = await db.User.findAll({
                 where: { id },
                 include: [{ model: db.Course, as: 'authorInfo' }],
                 raw: true,

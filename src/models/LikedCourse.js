@@ -1,9 +1,14 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-    class LikedCourse extends Model {}
+    class Liked_Course extends Model {
+        static associate(models) {
+            Liked_Course.belongsTo(models.User, { foreignKey: 'id', targetKey: 'id', as: 'userLikedCourse' });
+            Liked_Course.belongsTo(models.Course, { foreignKey: 'courseId', targetKey: 'id', as: 'likedCourseInfo' });
+        }
+    }
 
-    LikedCourse.init(
+    Liked_Course.init(
         {
             id: {
                 allowNull: false,
@@ -16,8 +21,8 @@ module.exports = (sequelize, DataTypes) => {
         },
         {
             sequelize,
-            modelName: 'LikedCourse',
+            modelName: 'Liked_Course',
         },
     );
-    return LikedCourse;
+    return Liked_Course;
 };

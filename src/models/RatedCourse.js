@@ -1,9 +1,9 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-    class RatedCourse extends Model {}
+    class Rated_Course extends Model {}
 
-    RatedCourse.init(
+    Rated_Course.init(
         {
             id: {
                 allowNull: false,
@@ -17,8 +17,8 @@ module.exports = (sequelize, DataTypes) => {
         },
         {
             sequelize,
-            modelName: 'RatedCourse',
+            modelName: 'Rated_Course',
         },
     );
-    return RatedCourse;
+    return Rated_Course;
 };
