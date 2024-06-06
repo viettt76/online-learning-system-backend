@@ -27,6 +27,10 @@ viewEngine(app);
 routes(app);
 connectDB();
 
+app.get('/', (req, res) => {
+    res.send('hello world');
+});
+
 app.listen(port, () => {
     console.log(`Example app listening at http://localhost:${port}`);
 });
