@@ -1,9 +1,15 @@
 const { Sequelize } = require('sequelize');
 
-const sequelize = new Sequelize('certificate_learning_system', 'root', null, {
-    host: 'localhost',
+const sequelize = new Sequelize('railway', 'root', 'ZDEHwTaRwQXhFQUhuBJoHCUAzcYqCOVf', {
+    host: 'monorail.proxy.rlwy.net',
     dialect: 'mysql',
     logging: false,
+    define: {
+        charset: 'utf8mb4',
+        collate: 'utf8mb4_general_ci',
+        timestamps: true,
+    },
+    port: 23092,
 });
 
 const connectDB = async () => {

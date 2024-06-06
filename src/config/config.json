@@ -1,14 +1,15 @@
 {
     "development": {
         "username": "root",
-        "password": null,
-        "database": "certificate_learning_system",
-        "host": "127.0.0.1",
+        "password": "ZDEHwTaRwQXhFQUhuBJoHCUAzcYqCOVf",
+        "database": "railway",
+        "host": "monorail.proxy.rlwy.net",
         "dialect": "mysql",
         "logging": false,
         "query": {
             "raw": true
         },
+        "port": 23092,
         "timezone": "+07:00"
     },
     "test": {
@@ -19,10 +20,10 @@
         "dialect": "mysql"
     },
     "production": {
-        "username": "root",
-        "password": null,
-        "database": "database_production",
-        "host": "127.0.0.1",
+        "username": "sql12711381",
+        "password": "Nxu46k73ux",
+        "database": "sql12711381",
+        "host": "sql12.freesqldatabase.com",
         "dialect": "mysql"
     }
 }

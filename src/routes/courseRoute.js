@@ -15,5 +15,6 @@ route.get('/cart', courseController.cart);
 route.post('/cart/add', courseController.addCart);
 route.get('/purchased', courseController.purchased);
 route.post('/purchased/add', courseController.addPurchased);
+route.get('/test', courseController.test);
 
 module.exports = route;

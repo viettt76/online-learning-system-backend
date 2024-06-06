@@ -100,7 +100,6 @@ class UserController {
     async isTeacher(req, res, next) {
         try {
             const { id, job, introduction } = req.body;
-            console.log(req.body);
             let user = await db.User.findOne({ where: { id }, raw: false });
             user.job = job;
             user.introduction = introduction;
