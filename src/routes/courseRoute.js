@@ -1,19 +1,24 @@
 const express = require('express');
 const courseController = require('../controllers/courseController');
+const registerRoute = require('../utils/registerRoute');
 
-const route = express.Router();
+const router = express.Router();
 
-route.get('/all', courseController.getAll);
-route.get('/detail', courseController.getDetail);
-route.post('/post', courseController.post);
-route.get('/teaching', courseController.teaching);
-route.get('/search', courseController.search);
-route.put('/update-info', courseController.updateInfo);
-route.get('/favorite', courseController.favorite);
-route.post('/favorite/add', courseController.addFavorite);
-route.get('/cart', courseController.cart);
-route.post('/cart/add', courseController.addCart);
-route.get('/purchased', courseController.purchased);
-route.post('/purchased/add', courseController.addPurchased);
+const routes = [
+    { method: 'get', path: '/all', action: 'getAll' },
+    { method: 'get', path: '/detail', action: 'getDetail' },
+    { method: 'post', path: '/post', action: 'post' },
+    { method: 'get', path: '/teaching', action: 'teaching' },
+    { method: 'get', path: '/search', action: 'search' },
+    { method: 'put', path: '/update-info', action: 'updateInfo' },
+    { method: 'get', path: '/favorite', action: 'favorite' },
+    { method: 'post', path: '/favorite/add', action: 'addFavorite' },
+    { method: 'get', path: '/cart', action: 'cart' },
+    { method: 'post', path: '/cart/add', action: 'addCart' },
+    { method: 'get', path: '/purchased', action: 'purchased' },
+    { method: 'post', path: '/purchased/add', action: 'addPurchased' },
+];
 
-module.exports = route;
+registerRoute(router, routes, courseController);
+
+module.exports = router;

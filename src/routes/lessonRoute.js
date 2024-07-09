@@ -1,9 +1,14 @@
 const express = require('express');
 const lessonController = require('../controllers/lessonController');
+const registerRoute = require('../utils/registerRoute');
 
-const route = express.Router();
+const router = express.Router();
 
-route.post('/post', lessonController.post);
-route.get('/video', lessonController.video);
+const routes = [
+    { method: 'post', path: '/post', action: 'post' },
+    { method: 'get', path: '/video', action: 'video' },
+];
 
-module.exports = route;
+registerRoute(router, routes, lessonController);
+
+module.exports = router;

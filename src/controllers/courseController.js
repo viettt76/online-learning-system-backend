@@ -1,415 +1,426 @@
-const db = require('../models');
-const { Op } = require('sequelize');
+const { ILike } = require('typeorm');
+const { AppDataSource } = require('../data-source');
+const { Course } = require('../entity/Course');
+const { LikedCourse } = require('../entity/LikedCourse');
+const { CourseCart } = require('../entity/CourseCart');
+const { PurchasedCourse } = require('../entity/PurchasedCourse');
+
 const { checkSignature } = require('../utils/commonUtils');
 
 class CourseController {
+    constructor() {
+        this.courseRepository = AppDataSource.getRepository(Course);
+        this.likedCourseRepository = AppDataSource.getRepository(LikedCourse);
+        this.courseCartRepository = AppDataSource.getRepository(CourseCart);
+        this.purchasedCourseRepository = AppDataSource.getRepository(PurchasedCourse);
+    }
+
     // [GET] /course/all
     async getAll(req, res, next) {
-        try {
-            let courseList = await db.Course.findAll({
-                attributes: [
-                    'id',
-                    'img',
-                    'name',
-                    'price',
-                    'level',
-                    'description',
-                    'numberOfParticipants',
-                    'numberOfReviews',
-                    'totalStars',
-                ],
-                include: [
-                    { model: db.User, attributes: ['id', 'familyName', 'givenName', 'picture'], as: 'authorInfo' },
-                ],
-                raw: true,
-                nest: true,
-            });
-            courseList = courseList.map((course) => {
-                course.rate =
-                    course.numberOfReviews === 0 ? 0 : (course.totalStars / course.numberOfReviews).toFixed(1);
-                delete course.numberOfReviews;
-                delete course.totalStars;
+        let courseList = await this.courseRepository.find({
+            relations: {
+                authorInfo: true,
+                chapterList: {
+                    lessonList: true,
+                },
+            },
+            select: {
+                id: true,
+                img: true,
+                name: true,
+                price: true,
+                level: true,
+                description: true,
+                numberOfParticipants: true,
+                numberOfReviews: true,
+                totalStars: true,
+                authorInfo: {
+                    id: true,
+                    familyName: true,
+                    givenName: true,
+                    picture: true,
+                },
+                chapterList: {
+                    id: true,
+                    lessonList: {
+                        time: true,
+                    },
+                },
+            },
+        });
 
-                return course;
-            });
-            res.status(200).json({
-                errCode: 0,
-                data: courseList,
-            });
-        } catch (error) {
-            next(error);
-        }
+        courseList = courseList?.map((course) => {
+            let time = 0;
+            course.rate = course.numberOfReviews === 0 ? 0 : (course.totalStars / course.numberOfReviews).toFixed(1);
+            delete course.numberOfReviews;
+            delete course.totalStars;
+
+            course?.chapterList?.map((chapter) =>
+                chapter?.lessonList?.map((lesson) => {
+                    time += lesson?.time;
+                }),
+            );
+
+            course.time = time;
+            delete course?.chapterList;
+
+            return course;
+        });
+
+        return {
+            errCode: 0,
+            data: courseList,
+        };
     }
 
     // [GET] /course/detail
     async getDetail(req, res, next) {
-        try {
-            const id = req.query.id;
-            const courses = await db.Course.findAll({
-                where: { id },
-                attributes: [
-                    'img',
-                    'name',
-                    'price',
-                    'level',
-                    'description',
-                    'numberOfParticipants',
-                    'numberOfReviews',
-                    'totalStars',
-                ],
-                include: [
-                    { model: db.User, attributes: ['familyName', 'givenName', 'picture'], as: 'authorInfo' },
-                    {
-                        model: db.Chapter,
-                        attributes: ['id', 'chapterNumber', 'title'],
-                        as: 'chapterInfo',
-                        include: [{ model: db.Lesson, attributes: ['id', 'name', 'video', 'time'], as: 'lessonInfo' }],
+        const id = req.query.id;
+        const courses = await this.courseRepository.find({
+            where: { id },
+            relations: {
+                authorInfo: true,
+                chapterList: {
+                    lessonList: true,
+                },
+            },
+            select: {
+                img: true,
+                name: true,
+                price: true,
+                level: true,
+                description: true,
+                numberOfParticipants: true,
+                numberOfReviews: true,
+                totalStars: true,
+                authorInfo: {
+                    familyName: true,
+                    givenName: true,
+                    picture: true,
+                },
+                chapterList: {
+                    id: true,
+                    chapterNumber: true,
+                    title: true,
+                    lessonList: {
+                        id: true,
+                        lessonNumber: true,
+                        name: true,
+                        video: true,
+                        time: true,
                     },
-                ],
-                order: [[{ model: db.Chapter, as: 'chapterInfo' }, 'chapterNumber', 'ASC']],
-                raw: true,
-                nest: true,
-            });
+                },
+            },
+            order: {
+                chapterList: {
+                    chapterNumber: 'ASC',
+                },
+            },
+        });
 
-            let chapterList = [];
-            let numberOfLessons = 0;
-            let time = 0;
+        let totalNumberOfLessons = 0;
+        let time = 0;
 
-            courses
-                .map((course) => ({ ...course?.chapterInfo }))
-                .forEach((chapter) => {
-                    time += chapter?.lessonInfo?.time;
-                    const chapterExisting = chapterList.find((i) => i?.chapterId === chapter?.id);
-                    if (chapterExisting) {
-                        if (chapter.lessonInfo.id !== null) {
-                            numberOfLessons++;
-                            chapterExisting.numberOfLessons++;
-                            chapterExisting.lessonList.push(chapter.lessonInfo);
-                        }
-                    } else if (chapter?.id) {
-                        let obj = {
-                            chapterId: chapter?.id,
-                            chapterNumber: chapter?.chapterNumber,
-                            title: chapter?.title,
-                        };
-                        if (chapter?.lessonInfo?.id === null) {
-                            obj.numberOfLessons = 0;
-                            obj.lessonList = [];
-                        } else {
-                            numberOfLessons++;
-                            obj.numberOfLessons = 1;
-                            obj.lessonList = [chapter?.lessonInfo];
-                        }
-                        chapterList.push(obj);
-                    }
+        courses.forEach((course) =>
+            course?.chapterList?.forEach((chapter) => {
+                chapter.numberOfLessons = chapter?.lessonList?.length;
+                chapter?.lessonList?.forEach((lesson) => {
+                    time += lesson?.time;
+                    totalNumberOfLessons++;
                 });
+            }),
+        );
 
-            const course = {
-                name: courses[0]?.name,
-                img: courses[0]?.img,
-                author: courses[0]?.authorInfo,
-                description: courses[0]?.description,
-                level: courses[0]?.level,
-                price: courses[0]?.price,
-                numberOfReviews: courses[0]?.numberOfReviews,
-                rate:
-                    courses[0]?.numberOfReviews === 0
-                        ? 0
-                        : (courses[0]?.totalStars / courses[0]?.numberOfReviews).toFixed(1),
-                numberOfParticipants: courses[0]?.numberOfParticipants,
-                numberOfLessons,
-                time,
-                chapterList,
-            };
+        const course = {
+            name: courses[0]?.name,
+            img: courses[0]?.img,
+            author: courses[0]?.authorInfo,
+            description: courses[0]?.description,
+            level: courses[0]?.level,
+            price: courses[0]?.price,
+            numberOfReviews: courses[0]?.numberOfReviews,
+            rate:
+                courses[0]?.numberOfReviews === 0
+                    ? 0
+                    : (courses[0]?.totalStars / courses[0]?.numberOfReviews).toFixed(1),
+            numberOfParticipants: courses[0]?.numberOfParticipants,
+            numberOfLessons: totalNumberOfLessons,
+            time,
+            chapterList: courses[0]?.chapterList,
+        };
 
-            res.status(200).json({
-                errCode: 0,
-                data: course,
-            });
-        } catch (error) {
-            next(error);
-        }
+        return {
+            errCode: 0,
+            data: course,
+        };
     }
 
     // [POST] /course/post
     async post(req, res, next) {
-        try {
-            const courseInfo = req.body;
-            if (Number(courseInfo?.price) === NaN) {
-                return res.status(404).json({
-                    errCode: 2,
-                    message: 'Price must be a number',
-                });
-            }
-            await db.Course.create({
-                img: courseInfo?.img,
-                name: courseInfo?.name,
-                description: courseInfo?.description,
-                authorId: courseInfo?.authorId,
-                price: courseInfo?.price,
-                level: courseInfo?.level,
-            });
-            res.status(200).json({
-                errCode: 0,
-            });
-        } catch (error) {
-            next(error);
+        const courseInfo = req.body;
+        if (Number(courseInfo?.price) === NaN) {
+            throw {
+                status: 404,
+                message: 'Price must be a number',
+            };
         }
+        await this.courseRepository.save({
+            img: courseInfo?.img,
+            name: courseInfo?.name,
+            description: courseInfo?.description,
+            authorId: courseInfo?.authorId,
+            price: courseInfo?.price,
+            level: courseInfo?.level,
+        });
+        return {
+            errCode: 0,
+        };
     }
 
     // [GET] /course/teaching
     async teaching(req, res, next) {
-        try {
-            const id = req.query.id;
-            const courseList = await db.Course.findAll({
-                where: { authorId: id },
-            });
-            res.status(200).json({
-                errCode: 0,
-                data: courseList,
-            });
-        } catch (error) {
-            next(error);
-        }
+        const id = req.query.id;
+        const courseList = await this.courseRepository.find({
+            where: { authorId: id },
+        });
+        return {
+            errCode: 0,
+            data: courseList,
+        };
     }
 
     // [GET] /course/search
     async search(req, res, next) {
-        try {
-            const keyword = req.query.keyword;
+        const keyword = req.query.keyword;
 
-            const courseList = await db.Course.findAll({
-                where: {
-                    [Op.or]: [
-                        {
-                            name: {
-                                [Op.like]: '%' + keyword + '%',
-                            },
-                        },
-                        {
-                            description: {
-                                [Op.like]: '%' + keyword + '%',
-                            },
-                        },
-                    ],
+        const courseList = await this.courseRepository.find({
+            where: {
+                name: ILike('%' + keyword + '%'),
+            },
+            relations: {
+                authorInfo: true,
+            },
+            select: {
+                authorInfo: {
+                    familyName: true,
+                    givenName: true,
                 },
-                include: [{ model: db.User, attributes: ['familyName', 'givenName'], as: 'authorInfo' }],
-                raw: true,
-                nest: true,
-            });
+            },
+        });
 
-            res.status(200).json({
-                errCode: 0,
-                data: courseList,
-            });
-        } catch (error) {
-            next(error);
-        }
+        return {
+            errCode: 0,
+            data: courseList,
+        };
     }
 
     // [PUT] /course/update-info
     async updateInfo(req, res, next) {
-        try {
-            const data = req.body;
+        const data = req.body;
 
-            let course = await db.Course.findOne({
-                where: { id: data?.id },
-                raw: false,
-            });
+        let course = await this.courseRepository.findOne({
+            where: { id: data?.id },
+        });
 
-            course.img = data?.img;
-            course.name = data?.name;
-            course.description = data?.description;
-            course.authorId = data?.authorId;
-            course.price = data?.price;
-            course.level = data?.level;
+        course.img = data?.img;
+        course.name = data?.name;
+        course.description = data?.description;
+        course.authorId = data?.authorId;
+        course.price = data?.price;
+        course.level = data?.level;
 
-            await course.save();
+        await this.courseRepository.save(course);
 
-            res.status(200).json({
-                errCode: 0,
-            });
-        } catch (error) {
-            next(error);
-        }
+        return {
+            errCode: 0,
+        };
     }
 
     // [GET] /course/favorite
     async favorite(req, res, next) {
-        try {
-            const tokenData = req.cookies.token;
-            if (tokenData) {
-                const check = checkSignature(tokenData);
-                if (check.valid) {
-                    const favoriteCourseList = await db.Liked_Course.findAll({
-                        where: {
-                            userId: check?.payload?.id,
+        const tokenData = req.cookies.token;
+        if (tokenData) {
+            const check = checkSignature(tokenData);
+            if (check.valid) {
+                const favoriteCourseList = await this.likedCourseRepository.find({
+                    where: {
+                        userId: check?.payload?.id,
+                    },
+                    relations: {
+                        likedCourseInfo: true,
+                    },
+                    select: {
+                        courseId: true,
+                        likedCourseInfo: {
+                            img: true,
+                            name: true,
+                            price: true,
                         },
-                        attributes: ['courseId'],
-                        include: [{ model: db.Course, attributes: ['img', 'name', 'price'], as: 'likedCourseInfo' }],
-                        raw: true,
-                        nest: true,
-                        order: [['updatedAt', 'DESC']],
-                    });
-                    return res.json({
-                        errCode: 0,
-                        data: favoriteCourseList,
-                    });
-                }
+                    },
+                    order: {
+                        updatedAt: 'DESC',
+                    },
+                });
+                return {
+                    errCode: 0,
+                    data: favoriteCourseList,
+                };
             }
-        } catch (error) {
-            next(error);
         }
     }
 
     // [POST] /course/favorite/add
     async addFavorite(req, res, next) {
-        try {
-            const courseId = req.body.courseId;
-            const tokenData = req.cookies.token;
-            if (tokenData) {
-                const check = checkSignature(tokenData);
-                if (check.valid && courseId) {
-                    const [likedCourse, created] = await db.Liked_Course.findOrCreate({
-                        where: { userId: check?.payload?.id, courseId },
-                        defaults: {
-                            userId: check?.payload?.id,
-                            courseId,
-                        },
+        const courseId = req.body.courseId;
+        const tokenData = req.cookies.token;
+        if (tokenData) {
+            const check = checkSignature(tokenData);
+            if (check.valid && courseId) {
+                const likedCourse = await this.likedCourseRepository.findOne({
+                    where: { userId: check?.payload?.id, courseId },
+                });
+                if (!likedCourse) {
+                    await this.likedCourseRepository.save({
+                        userId: check?.payload?.id,
+                        courseId,
                     });
-                    if (created) {
-                        res.status(200).json({
-                            errCode: 0,
-                        });
-                    } else {
-                        res.status(200).json({
-                            errCode: 1,
-                        });
-                    }
+                    return {
+                        errCode: 0,
+                    };
                 }
+                throw {
+                    status: 409,
+                    errCode: 1,
+                    message: 'This course has been previously added to favorites',
+                };
             }
-        } catch (error) {
-            next(error);
         }
     }
 
     // [GET] /course/cart
     async cart(req, res, next) {
-        try {
-            const tokenData = req.cookies.token;
-            if (tokenData) {
-                const check = checkSignature(tokenData);
-                if (check.valid) {
-                    const courseCartList = await db.Courses_Cart.findAll({
-                        where: {
-                            userId: check?.payload?.id,
+        const tokenData = req.cookies.token;
+        if (tokenData) {
+            const check = checkSignature(tokenData);
+            if (check.valid) {
+                const courseCartList = await this.courseCartRepository.find({
+                    where: {
+                        userId: check?.payload?.id,
+                    },
+                    relations: {
+                        courseCartInfo: true,
+                    },
+                    select: {
+                        courseId: true,
+                        courseCartInfo: {
+                            img: true,
+                            name: true,
+                            price: true,
                         },
-                        attributes: ['courseId'],
-                        include: [{ model: db.Course, attributes: ['img', 'name', 'price'], as: 'courseCartInfo' }],
-                        raw: true,
-                        nest: true,
-                        order: [['updatedAt', 'DESC']],
-                    });
-                    return res.json({
-                        errCode: 0,
-                        data: courseCartList,
-                    });
-                }
+                    },
+                    order: {
+                        updatedAt: 'DESC',
+                    },
+                });
+                return {
+                    errCode: 0,
+                    data: courseCartList,
+                };
             }
-        } catch (error) {
-            next(error);
         }
     }
 
     // [POST] /course/cart/add
     async addCart(req, res, next) {
-        try {
-            const courseId = req.body.courseId;
-            const tokenData = req.cookies.token;
-            if (tokenData) {
-                const check = checkSignature(tokenData);
-                if (check.valid && courseId) {
-                    const [courseCart, created] = await db.Courses_Cart.findOrCreate({
-                        where: { userId: check?.payload?.id, courseId },
-                        defaults: {
-                            userId: check?.payload?.id,
-                            courseId,
-                        },
+        const courseId = req.body.courseId;
+        const tokenData = req.cookies.token;
+        if (tokenData) {
+            const check = checkSignature(tokenData);
+            if (check.valid && courseId) {
+                const courseCart = await this.courseCartRepository.findOne({
+                    where: { userId: check?.payload?.id, courseId },
+                    defaults: {
+                        userId: check?.payload?.id,
+                        courseId,
+                    },
+                });
+                if (!courseCart) {
+                    await this.courseCartRepository.save({
+                        userId: check?.payload?.id,
+                        courseId,
                     });
-                    if (created) {
-                        res.status(200).json({
-                            errCode: 0,
-                        });
-                    } else {
-                        res.status(200).json({
-                            errCode: 1,
-                        });
-                    }
+                    return {
+                        errCode: 0,
+                    };
                 }
+                throw {
+                    status: 409,
+                    errCode: 1,
+                    message: 'This course has been added to your cart',
+                };
             }
-        } catch (error) {
-            next(error);
         }
     }
 
     // [GET] /course/purchased
     async purchased(req, res, next) {
-        try {
-            const tokenData = req.cookies.token;
-            if (tokenData) {
-                const check = checkSignature(tokenData);
-                if (check.valid) {
-                    const courseCartList = await db.Purchased_Course.findAll({
-                        where: {
-                            userId: check?.payload?.id,
+        const tokenData = req.cookies.token;
+        if (tokenData) {
+            const check = checkSignature(tokenData);
+            if (check.valid) {
+                const courseCartList = await this.purchasedCourseRepository.find({
+                    where: {
+                        userId: check?.payload?.id,
+                    },
+                    relations: {
+                        purchasedCourseInfo: true,
+                    },
+                    select: {
+                        courseId: true,
+                        purchasedCourseInfo: {
+                            img: true,
+                            name: true,
+                            price: true,
                         },
-                        attributes: ['courseId'],
-                        include: [
-                            { model: db.Course, attributes: ['img', 'name', 'price'], as: 'purchasedCourseInfo' },
-                        ],
-                        raw: true,
-                        nest: true,
-                        order: [['updatedAt', 'DESC']],
-                    });
-                    return res.json({
-                        errCode: 0,
-                        data: courseCartList,
-                    });
-                }
+                    },
+
+                    order: {
+                        updatedAt: 'DESC',
+                    },
+                });
+                return {
+                    errCode: 0,
+                    data: courseCartList,
+                };
             }
-        } catch (error) {
-            next(error);
         }
     }
 
     // [POST] /course/purchased/add
     async addPurchased(req, res, next) {
-        try {
-            const courseId = req.body.courseId;
-            const tokenData = req.cookies.token;
-            if (tokenData) {
-                const check = checkSignature(tokenData);
-                if (check.valid && courseId) {
-                    const [purchasedCourse, created] = await db.Purchased_Course.findOrCreate({
-                        where: { userId: check?.payload?.id, courseId },
-                        defaults: {
-                            userId: check?.payload?.id,
-                            courseId,
-                        },
+        const courseId = req.body.courseId;
+        const tokenData = req.cookies.token;
+        if (tokenData) {
+            const check = checkSignature(tokenData);
+            if (check.valid && courseId) {
+                const purchasedCourse = await this.purchasedCourseRepository.find({
+                    where: { userId: check?.payload?.id, courseId },
+                });
+                if (!purchasedCourse) {
+                    await this.purchasedCourseRepository.save({
+                        userId: check?.payload?.id,
+                        courseId,
                     });
-                    if (created) {
-                        res.status(200).json({
-                            errCode: 0,
-                        });
-                    } else {
-                        res.status(200).json({
-                            errCode: 1,
-                        });
-                    }
+                    return {
+                        errCode: 0,
+                    };
                 }
+                throw {
+                    status: 409,
+                    errCode: 1,
+                    message: 'You have already purchased this course',
+                };
             }
-        } catch (error) {
-            next(error);
         }
     }
 }

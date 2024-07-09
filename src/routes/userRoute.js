@@ -1,13 +1,19 @@
 const express = require('express');
 const userController = require('../controllers/userController');
+const registerRoute = require('../utils/registerRoute');
 
-const route = express.Router();
+const router = express.Router();
 
-route.post('/login', userController.login);
-route.post('/logout', userController.logout);
-route.get('/personal-info', userController.personalInfo);
-route.patch('/is_teacher', userController.isTeacher);
-route.get('/teacher/search', userController.searchTeacher);
-route.get('/teacher/detail', userController.teacherDetail);
+const routes = [
+    { method: 'post', path: '/login', action: 'login' },
+    { method: 'post', path: '/logout', action: 'logout' },
+    { method: 'post', path: '/verify-token', action: 'verifyToken' },
+    { method: 'get', path: '/personal-info', action: 'personalInfo' },
+    { method: 'patch', path: '/is_teacher', action: 'isTeacher' },
+    { method: 'get', path: '/teacher/search', action: 'searchTeacher' },
+    { method: 'get', path: '/teacher/detail', action: 'teacherDetail' },
+];
 
-module.exports = route;
+registerRoute(router, routes, userController);
+
+module.exports = router;

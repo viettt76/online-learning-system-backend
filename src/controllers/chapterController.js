@@ -1,11 +1,16 @@
-const db = require('../models');
+const { AppDataSource } = require('../data-source');
+const { Chapter } = require('../entity/Chapter');
 
 class ChapterController {
+    constructor() {
+        this.chapterRepository = AppDataSource.getRepository(Chapter);
+    }
+
     // [POST] /chapter/post
     async post(req, res, next) {
         try {
             const data = req.body;
-            const chapter = await db.Chapter.create({
+            const chapter = await this.chapterRepository.save({
                 courseId: data?.courseId,
                 chapterNumber: data?.chapterNumber,
                 title: data?.title,

@@ -1,8 +1,11 @@
 const express = require('express');
 const chapterController = require('../controllers/chapterController');
+const registerRoute = require('../utils/registerRoute');
 
-const route = express.Router();
+const router = express.Router();
 
-route.post('/post', chapterController.post);
+const routes = [{ method: 'post', path: '/post', action: 'post' }];
 
-module.exports = route;
+registerRoute(router, routes, chapterController);
+
+module.exports = router;
