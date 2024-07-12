@@ -51,6 +51,8 @@ class UserController {
                         httpOnly: true,
                         path: '/',
                         maxAge: 365 * 24 * 60 * 60,
+                        sameSite: 'None',
+                        secure: true,
                     },
                 },
             },
